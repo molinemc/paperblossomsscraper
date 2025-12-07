@@ -120,7 +120,7 @@ def make_user_description_file():
     blurbs += get_technique_blurbs(pdfs)
     blurbs += get_school_blurbs(pdfs)
     blurbs = [blurb for blurb in blurbs if blurb is not None]
-    f = open("user_descriptions.csv", "w")
+    f = open("user_descriptions.csv", "w", encoding="utf-8")
     for blurb in blurbs:
         escaped_text = blurb["text"].replace('"', "'")
         escaped_text = escaped_text.replace('\n', '%0A')
@@ -134,7 +134,7 @@ def get_json(filename: str) -> list[dict[str, Any]]:
         path = f"./{filename}.json"
     if not os.path.isfile(path):
         raise Exception(f"Could not find {filename}.json")
-    f = open(path, "r")
+    f = open(path, "r", encoding="utf-8")
     dictList = json.loads(f.read())
     f.close()
     return dictList
