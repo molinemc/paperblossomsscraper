@@ -11,6 +11,8 @@ a separate package.
 5. Execute the following:
 ```
 	python3 -m venv .venv
+	[Windows only] .venv\Scripts\activate
+	[Linux or MacOS] source .venv/bin/activate
 	python -m pip install -r requirements.txt
 	python -m scrape
 ```
