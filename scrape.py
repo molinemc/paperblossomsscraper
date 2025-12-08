@@ -160,12 +160,22 @@ def find_page(jsonEntry: dict[str, Any], pdfs: dict[str, PdfReader]) -> tuple[Pd
 
 def find_pdfs() -> dict[str, PdfReader]:
     availablePDFs = {}
-    for file in glob.glob('./*.pdf') + glob.glob('./pdfs/*.pdf'):
+    filenames = glob.glob('./*.pdf') + glob.glob('./pdfs/*.pdf')
+    cur_dir = os.getcwd()
+    if len(filenames) == 0:
+        print(f"Found no PDFs in {cur_dir} or {os.path.join(cur_dir, 'pdfs')}.")
+    else:
+        print(f"Checking PDFs in {cur_dir} or {os.path.join(cur_dir, 'pdfs')}:")
+    for file in filenames:
         reader = PdfReader(file)
         file_id = get_id(reader)
         if file_id is not None:
             page_offset = determine_page_offset(reader)
             availablePDFs[file_id] = {"reader": reader, "page_offset": page_offset}
+            print(file + " identified as " + file_id + ".")
+        else:
+            print(file + " not recognized as sourcebook.")
+    print(f"No remaining PDFs to consider.")
     return availablePDFs
 
 def determine_page_offset(reader: PdfReader) -> int:
@@ -175,7 +185,7 @@ def determine_page_offset(reader: PdfReader) -> int:
         page_offset_confirmations[i] = 0
     while True:
         cur_page_num += 1
-        text_items = find_text_items(reader, cur_page_num, include_following_page = False, text_only = True)
+        text_items = find_text_items(reader, [cur_page_num], text_only = True)
         for possible_page_offset in range(-5, 5):
             check_num = cur_page_num - possible_page_offset
             if check_num < 0:
@@ -197,6 +207,8 @@ def determine_page_offset(reader: PdfReader) -> int:
 #def find_text_items(reader, page_num, include_following_page = True, text_only = False):
 
 def get_id(reader: PdfReader) -> str:
+    if len(reader.pages) < 5:
+        return None
     initial_pages_text = grab_text(reader, range(5)).lower()
     if "the mantis clan" in initial_pages_text:
         return "Mantis"
@@ -220,9 +232,8 @@ def get_id(reader: PdfReader) -> str:
 
 def grab_text(reader, page_nums):
     text = ""
-    for page in page_nums:
-        for item in condense_text(find_text_items(reader, page), []):
-            text += item[0]
+    for item in condense_text(find_text_items(reader, page_nums), []):
+        text += item[0]
     return text
     
 def chars_only(name: str):
@@ -232,7 +243,7 @@ def get_blurb(name: str, search_name: str, itemType: str, page_num: int, book: s
               ignore_properties_list: list[str] = [], 
               beginning_properties: bool = False,
               cut_to_list: bool = False, verbose: bool = False) -> str:
-    condensed_items = condense_text(find_text_items(reader, page_num), beginning_properties)
+    condensed_items = condense_text(find_text_items(reader, [page_num, page_num + 1]), beginning_properties)
     headings = \
         [(i, condensed_items[i][0]) for i in range(0, len(condensed_items)) 
                                     if 'Heading' == condensed_items[i][1]]
@@ -304,15 +315,14 @@ def get_blurb(name: str, search_name: str, itemType: str, page_num: int, book: s
     return {"name": name, "itemType": itemType, "text": blurb, 
             "book": book, "page": page_num}
 
-def find_text_items(reader, page_num, include_following_page = True, text_only = False):
+def find_text_items(reader, page_nums, text_only = False):
     text_items = []
     if text_only: 
         visitor = lambda a,b,c,d,e: text_items.append(a)
     else:
         visitor = lambda a,b,c,d,e: text_items.append([a,b,c,d,e])
-    reader.pages[page_num].extract_text(visitor_text=visitor)
-    if include_following_page:
-        reader.pages[page_num + 1].extract_text(visitor_text=visitor)
+    for page_num in page_nums:
+        reader.pages[page_num].extract_text(visitor_text=visitor)
     return text_items
 
 
